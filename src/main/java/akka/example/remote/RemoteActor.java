@@ -38,12 +38,12 @@ public class RemoteActor extends AbstractActor {
 
     @Override
     public void preStart() throws Exception {
-        log.info("RemoteActor 시작");
+        log.info("BackendActor 시작");
     }
 
     @Override
     public void postStop() throws Exception {
-        log.info("RemoteActor 중지");
+        log.info("BackendActor 중지");
     }
 
     @Override

@@ -5,6 +5,7 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 public class RemoteLookupProxy extends AbstractActor {
     final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
@@ -28,6 +29,8 @@ public class RemoteLookupProxy extends AbstractActor {
                         id -> {
                             log.error("Received actor identity");
                             ActorRef ref = id.getActorRef().get();
+
+                            // become을 통해 Receive를 변경한다.
                             getContext().become(active(ref));
                             getContext().watch(ref);
                         }
@@ -37,6 +40,7 @@ public class RemoteLookupProxy extends AbstractActor {
                         t -> {
                             log.error("request timeout");
                             sendIdentifyRequest();
+                            TimeUnit.SECONDS.sleep(10);
                         }
                 )
                 .matchAny(
@@ -49,7 +53,7 @@ public class RemoteLookupProxy extends AbstractActor {
 
     @Override
     public void preStart() throws Exception {
-        getContext().setReceiveTimeout(Duration.ofSeconds(3));
+        getContext().setReceiveTimeout(Duration.ofSeconds(13));
         sendIdentifyRequest();
     }
 
@@ -57,9 +61,7 @@ public class RemoteLookupProxy extends AbstractActor {
 
     private void sendIdentifyRequest() {
         ActorSelection selection = getContext().actorSelection(path);
-
         selection.tell(new Identify(path), self());
-
     }
 
     private Receive active(ActorRef ref) {
@@ -69,6 +71,8 @@ public class RemoteLookupProxy extends AbstractActor {
                         t -> {
                             if (t.actor().equals(ref)) {
                                 log.info("Actor {} terminated", t.actor());
+
+                                // Backend가 중지되었으므로 become을 통해 식별상태로 변경한다.
                                 getContext().become(identify);
                                 log.info("switching to identify state");
                                 getContext().setReceiveTimeout(Duration.ofSeconds(3));
@@ -76,13 +80,13 @@ public class RemoteLookupProxy extends AbstractActor {
                             }
                         }
                 )
-                .match(
-                        ReceiveTimeout.class,
-                        t -> {
-                            log.error("request timeout");
-                            sendIdentifyRequest();
-                        }
-                )
+//                .match(
+//                        ReceiveTimeout.class,
+//                        t -> {
+//                            log.error("request timeout");
+//                            sendIdentifyRequest();
+//                        }
+//                )
                 .match(
                         String.class,
                         msg -> {
@@ -91,8 +95,9 @@ public class RemoteLookupProxy extends AbstractActor {
                 )
                 .matchAny(
                         msg -> {
-                            log.info("active receive any: {}", msg);
-                            ref.forward(msg, getContext());
+                            log.info("Receive any: {}", msg);
+                            //ref.forward(msg, getContext());
+
                         }
                 )
                 .build();
