@@ -6,13 +6,15 @@ import akka.event.LoggingAdapter;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import java.util.Scanner;
+
 /**
  * RemoteActor에게 'hello world' 메시지를 보내면 대문자로 변환된 'HELLO WORLD' 메시지를 받는다.
  */
-public class LocalActor extends AbstractActor {
+public class FrontendActor extends AbstractActor {
     final static String config =
             "akka {\n" +
-            "  loglevel = \"INFO\"\n" +
+//            "  loglevel = \"INFO\"\n" +
             "  actor {\n" +
             "    provider = \"akka.remote.RemoteActorRefProvider\"\n" +
             "  }\n" +
@@ -30,10 +32,28 @@ public class LocalActor extends AbstractActor {
     final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
     public static void main(String[] args) {
-        Config config = ConfigFactory.parseString(LocalActor.config);
-        ActorSystem localSystem = ActorSystem.create("LocalSystem", config);
-        localSystem.actorOf(Props.create(LocalActor.class), "local");
-        localSystem.actorOf(Props.create(RemoteLookupProxy.class, "akka.tcp://RemoteSystem@127.0.0.1:5150/user/remote"), "lookup");
+        Config config = ConfigFactory.parseString(FrontendActor.config);
+        ActorSystem localSystem = ActorSystem.create("FrontendSystem", config);
+        ActorRef frontend = localSystem.actorOf(Props.create(FrontendActor.class), "frontend");
+        ActorRef lookup = localSystem.actorOf(Props.create(RemoteLookupProxy.class, "akka.tcp://BackendSystem@127.0.0.1:5150/user/backend"), "lookup");
+
+        try {
+            System.out.println(">>> exit to exit <<<");
+            Scanner scanner = new Scanner(System.in);
+
+            while(true) {
+                String line = scanner.next();
+                if ("exit".equals(line)) {
+                    break;
+                } else {
+                    lookup.tell(line, frontend);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            localSystem.terminate();
+        }
     }
 
     @Override
@@ -46,11 +66,11 @@ public class LocalActor extends AbstractActor {
                 - 감독자: 사용자가 생성한 액터는 /user (감독자)의 자식 액터로 등록된다. /system은 akka에서 사용하는 내장된 액터이다.
          */
 
-//        ActorRef remoteActor = getContext().actorOf(Props.create(RemoteActor.class), "remote");
+//        ActorRef remoteActor = getContext().actorOf(Props.create(BackendActor.class), "remote");
 //        log.info("이것은 원격액터: {}", remoteActor);
 //        remoteActor.tell("hello world", self());
         ActorSelection proxy = getContext().actorSelection("/user/lookup");
-        proxy.tell("hello world", self());
+//        proxy.tell("hello world", self());
     }
 
     @Override
@@ -58,17 +78,8 @@ public class LocalActor extends AbstractActor {
         return receiveBuilder()
                 .match(
                         String.class,
-                        msg -> {
-                            log.info("원격지에서 메시지를 수신:{}", msg);
-                        }
+                        msg -> log.info("원격지에서 메시지를 수신:{}", msg)
                 )
-                .build();
-    }
-
-    final Receive active(final ActorRef another) {
-        return receiveBuilder()
-                .match(
-                        Terminated.class, t -> t.actor().equals(another), t -> getContext().stop(getSelf()))
                 .build();
     }
 }
