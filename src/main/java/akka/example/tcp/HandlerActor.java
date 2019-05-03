@@ -9,6 +9,7 @@ import akka.io.TcpMessage;
 import akka.util.ByteString;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 
 public class HandlerActor extends AbstractActor {
     InetSocketAddress remote;
@@ -29,7 +30,10 @@ public class HandlerActor extends AbstractActor {
                         Tcp.Received.class,
                         received -> {
                             ByteString data = received.data();
-                            Tcp.Command cmd = TcpMessage.write(data);
+                            ByteString res = ByteString.fromString(data.decodeString("UTF-8").toUpperCase());
+                            log.info("Recv: {}, Send: {}",
+                                    data.decodeString("UTF-8"), res.decodeString("UTF-8"));
+                            Tcp.Command cmd = TcpMessage.write(res);
                             connection.tell(cmd, getSelf());
                         }
                 )
