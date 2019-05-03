@@ -4,9 +4,6 @@ import akka.actor.*;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-/**
- * RemoteActor에게 'hello world' 메시지를 보내면 대문자로 변환된 'HELLO WORLD' 메시지를 받는다.
- */
 public class Main extends AbstractActor {
     final static String config =
             "akka {\n" +
@@ -22,7 +19,11 @@ public class Main extends AbstractActor {
         ActorRef dummy = system.actorOf(Props.create(DummyActor.class));
 
         String msg = "hello world";
+
+        // 더미 액터를 중지시킨다.
         dummy.tell(PoisonPill.getInstance(), sender);
+
+        // 메시지를 보내지만 실해하고 DeadLetter 메시지함에 쌓이게 된다.
         System.out.println("메시지 전송: " + msg);
         dummy.tell(msg, sender);
     }

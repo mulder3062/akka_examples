@@ -9,7 +9,7 @@ public class DeadLetterMonitor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(
+                .match( // DeadLetter 메시지가 도착하면 액터를 살리고 메시지를 재전송한다.
                     DeadLetter.class,
                     deadLetter -> {
                         System.out.println("전송 실패: " + deadLetter);
