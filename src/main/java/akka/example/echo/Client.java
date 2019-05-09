@@ -58,7 +58,7 @@ public class Client extends AbstractActor {
                 .match(
                         ByteString.class,
                         msg -> {
-                            connection.tell(TcpMessage.write((ByteString) msg), getSelf());
+                            connection.tell(TcpMessage.write(msg), getSelf());
                         })
                 .match(
                         Tcp.CommandFailed.class,

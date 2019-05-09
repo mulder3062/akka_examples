@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package akka.example.udp_protobuf.proto;
+
+option java_multiple_files = true;
+
+message Content {
+    string body = 1;
+}
+
+message Message {
+    string title = 1;
+    int32 contentSize = 2;
+    repeated Content contents = 3;
+
+}
